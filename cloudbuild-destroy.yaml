@@ -1,0 +1,29 @@
+# /cloudbuild-destroy.yaml
+
+substitutions:
+  _RESOURCE_PREFIX: your-resource-prefix
+  _GCP_REGION: your-region
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # Terraform Init & Destroy
+  # This step will initialize Terraform with the existing backend and then
+  # destroy all the resources defined in the configuration.
+  - name: "hashicorp/terraform:1.7.0"
+    id: "Terraform Destroy"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        cd terraform
+        terraform init \
+          -backend-config="bucket=${_RESOURCE_PREFIX}-terraform-backend" \
+          -backend-config="prefix=terraform/state"
+          
+        terraform destroy \
+          -var="gcp_project_id=${PROJECT_ID}" \
+          -var="gcp_region=${_GCP_REGION}" \
+          -var="resource_prefix=${_RESOURCE_PREFIX}" \
+          -auto-approve 

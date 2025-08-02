@@ -1,0 +1,25 @@
+# /cloudbuild-tf-report.yaml
+
+substitutions:
+  _RESOURCE_PREFIX: your-resource-prefix # Default from variables.tf
+  _GCP_REGION: your-region              # Default from variables.tf
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - name: 'hashicorp/terraform:1.7.0'
+    id: 'Terraform Plan Report'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd terraform
+        terraform init \
+          -backend-config="bucket=${_RESOURCE_PREFIX}-terraform-backend" \
+          -backend-config="prefix=terraform/state"
+
+        terraform plan \
+          -var="gcp_project_id=${PROJECT_ID}" \
+          -var="gcp_region=${_GCP_REGION}" \
+          -var="resource_prefix=${_RESOURCE_PREFIX}"

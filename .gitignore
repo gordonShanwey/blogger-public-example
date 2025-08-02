@@ -1,0 +1,109 @@
+# Node.js & npm/yarn
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json # If you exclusively use yarn.lock, otherwise keep this or yarn.lock
+# yarn.lock # If you exclusively use package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Next.js
+.next/
+out/ # For static exports
+
+# TypeScript
+*.tsbuildinfo
+# dist/ # Uncomment if your compiled output goes to 'dist' and isn't checked in
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*.backup
+*.tfvars # Often contain sensitive or environment-specific values
+# crash.log
+# override.tf
+# override.tf.json
+# *_override.tf
+# *_override.tf.json
+# .terraformrc
+# terraform.rc
+
+# General Development
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE & Editor specific
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+build/
+# dist/ # Already listed under TypeScript, but common for other build processes too
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Temporary files
+*.tmp
+*~ 
+terraform/terraform.tfstate.backup

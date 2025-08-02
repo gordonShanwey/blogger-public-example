@@ -1,0 +1,40 @@
+# Node modules and dependencies
+node_modules
+npm-debug.log
+
+# Git and version control
+.git
+.gitignore
+
+# Environment and local configuration
+.env
+.env.local
+*.env.*
+gcp-credentials*.json
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Test files
+test
+coverage
+*.test.ts
+*.spec.ts
+
+# IDE settings
+.vscode
+.idea
+
+# Miscellaneous
+.DS_Store
+*.log
+README.md
+LICENSE
+cloudbuild.yaml
+Dockerfile
+.dockerignore
+
+# App Engine configuration (since we're using Cloud Run)
+app.yaml 

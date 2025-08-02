@@ -1,0 +1,20 @@
+# Example terraform.tfvars file
+# Copy this to terraform.tfvars and update with your actual values
+
+# GCP Project Configuration
+gcp_project_id = "your-gcp-project-id"
+gcp_region     = "europe-north1"
+
+# Resource naming
+resource_prefix = "your-prefix-name"  # Must be 1-24 characters, lowercase letters, numbers, or hyphens
+
+# Docker image configuration
+image_tag = "latest"  # Or specific version like "v1.0.0"
+
+# Secrets Configuration
+# IMPORTANT: Replace with your actual OpenAI API key
+# For security, consider using:
+# - Environment variable: TF_VAR_openai_api_key_value
+# - Secure CI/CD variable
+# - terraform apply with -var flag
+openai_api_key_value = "sk-your-openai-api-key-here"

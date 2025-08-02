@@ -1,0 +1,15 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Set environment variables
+ENV NODE_ENV=development
+
+# Expose the port
+EXPOSE 8080
+
+# The command will be specified in docker-compose.yml 

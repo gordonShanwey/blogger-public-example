@@ -1,0 +1,5 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*.backup
+*.tfvars # Often contain sensitive or environment-specific values

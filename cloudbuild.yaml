@@ -1,0 +1,132 @@
+substitutions:
+  _RESOURCE_PREFIX: your-resource-prefix  # Default from variables.tf
+  _GCP_REGION: your-region              # Default from variables.tf
+
+steps:
+  # Step 1: Create GCS backend bucket if it doesn't exist
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Create Terraform Backend Bucket'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        # Directly use Cloud Build substitutions.
+        # The shell will see the expanded values of _RESOURCE_PREFIX, PROJECT_ID, _GCP_REGION.
+        if gsutil ls -b "gs://${_RESOURCE_PREFIX}-terraform-backend" >/dev/null 2>&1; then
+          echo "Bucket gs://${_RESOURCE_PREFIX}-terraform-backend already exists."
+        else
+          echo "Bucket gs://${_RESOURCE_PREFIX}-terraform-backend does not exist. Creating..."
+          gsutil mb -p "${PROJECT_ID}" -l "${_GCP_REGION}" -c "STANDARD" "gs://${_RESOURCE_PREFIX}-terraform-backend"
+        fi
+
+  # Step 2: Terraform Infra-Only Apply (using the GCS backend)
+  - name: 'hashicorp/terraform:1.7.0'
+    id: 'Terraform Infra Apply'
+    entrypoint: 'sh'
+    waitFor: ['Create Terraform Backend Bucket'] # Ensure bucket exists before this step
+    args:
+      - '-c'
+      - |
+        cd terraform
+        # Initialize Terraform with the GCS backend.
+        # The bucket name is passed via -backend-config.
+        # Your terraform backend block should just specify 'gcs' and a prefix.
+        terraform init \
+          -backend-config="bucket=${_RESOURCE_PREFIX}-terraform-backend" \
+          -backend-config="prefix=terraform/state" # You can change this prefix if desired
+
+        terraform apply \
+          -var="gcp_project_id=${PROJECT_ID}" \
+          -var="gcp_region=${_GCP_REGION}" \
+          -var="resource_prefix=${_RESOURCE_PREFIX}" \
+          -target=google_artifact_registry_repository.docker_repo \
+          -target=google_service_account.cloud_run_runtime_sa \
+          -target=google_service_account.function_sa \
+          -target=google_storage_bucket.functions_source \
+          -target=google_firestore_database.named_db \
+          -target=google_pubsub_topic.main \
+          -target=google_project_iam_member.cloud_run_firestore \
+          -target=google_project_iam_member.cloud_run_secretmanager \
+          -target=google_project_iam_member.cloud_run_pubsub_publisher \
+          -target=google_project_iam_member.cloud_run_vertex_ai \
+          -target=google_project_iam_member.function_pubsub_publisher \
+          -target=google_project_iam_member.cloud_run_logs_writer \
+          -target=google_project_iam_member.allow_pubsub_invoke \
+          -target=google_storage_bucket_iam_member.function_sa_object_viewer \
+          -auto-approve
+         
+
+  # Step 3: Build Docker image for processor-service
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Processor Docker Image'
+    waitFor: ['Terraform Infra Apply']
+    args:
+      - 'build'
+      - '--platform=linux/amd64'
+      - '-t'
+      - '${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_RESOURCE_PREFIX}-images/processor-service:$COMMIT_SHA'
+      - '-t'
+      - '${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_RESOURCE_PREFIX}-images/processor-service:latest'
+      - './services/processor-service-py'
+
+  # Step 4: Push Docker image (commit SHA tag)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Processor Docker Image SHA'
+    waitFor: ['Build Processor Docker Image']
+    args:
+      - 'push'
+      - '${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_RESOURCE_PREFIX}-images/processor-service:$COMMIT_SHA'
+
+  # Step 5: Install dependencies for Cloud Function
+  - name: 'node:22'
+    id: 'Install Function Deps'
+    waitFor: ['Terraform Infra Apply']
+    entrypoint: 'npm'
+    args: ['install', '--production']
+    dir: 'functions/addFormPayloadEvent'
+
+  # Step 6: Zip the Cloud Function
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Zip Cloud Function'
+    waitFor: ['Install Function Deps']
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd functions/addFormPayloadEvent && \
+        zip -r addFormPayloadEvent.zip . -x "*.git*" "*node_modules/.cache*"
+
+  # Step 7: Upload the Cloud Function ZIP to GCS
+  - name: 'gcr.io/cloud-builders/gsutil'
+    id: 'Upload Cloud Function ZIP'
+    waitFor: ['Zip Cloud Function']
+    args:
+      - 'cp'
+      - 'functions/addFormPayloadEvent/addFormPayloadEvent.zip'
+      - 'gs://${_RESOURCE_PREFIX}-functions-source-${PROJECT_ID}/addFormPayloadEvent.zip'
+
+  # Step 8: Full Terraform Apply (Deploy Cloud Run, Function, etc.)
+  - name: 'hashicorp/terraform:1.7.0'
+    id: 'Terraform Full Apply'
+    entrypoint: 'sh'
+    # Wait for both the Docker image push and Function ZIP upload
+    waitFor: ['Push Processor Docker Image SHA', 'Upload Cloud Function ZIP'] 
+    args:
+      - '-c'
+      - |
+        cd terraform
+        # Initialize Terraform with the GCS backend.
+        terraform init \
+          -backend-config="bucket=${_RESOURCE_PREFIX}-terraform-backend" \
+          -backend-config="prefix=terraform/state"
+
+        # Apply all remaining changes (Cloud Run, Function, PubSub Subscription, etc.)
+        terraform apply \
+          -var="gcp_project_id=${PROJECT_ID}" \
+          -var="gcp_region=${_GCP_REGION}" \
+          -var="resource_prefix=${_RESOURCE_PREFIX}" \
+          -var="image_tag=${COMMIT_SHA}" \
+          -auto-approve
+
+options:
+  logging: CLOUD_LOGGING_ONLY

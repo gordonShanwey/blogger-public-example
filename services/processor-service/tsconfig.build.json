@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist",
+    "allowImportingTsExtensions": false
+  },
+  "exclude": ["**/*.test.ts", "**/*.spec.ts", "test/", "jest.config.ts"]
+} 
